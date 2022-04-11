@@ -29,8 +29,8 @@ class GymWrapperRGBD(GymWrapper, Env):
     def __init__(self, env, keys=None):
         # Run super method
         super().__init__(env=env, keys=None)
-        width = 84
-        height = 84
+        width = env.camera_widths[0]    # Assume all cameras have same width
+        height = env.camera_heights[0]
         n_channels = 4 #RGB-D
         self.observation_space = spaces.Box(low=0, high=255, shape=(height, width, n_channels), dtype=np.uint8)
 

@@ -11,7 +11,7 @@ model = SAC("MlpPolicy", env, verbose=1)
 
 #Traning of policy
 model.learn(total_timesteps=10000, log_interval=4)
-model.save("sac_pendulum") # try to run scrip and see how it is saved, want to do this on Idun
+model.save("sac_pendulum") # try to run script and see how it is saved, want to do this on Idun
 
 del model # remove to demonstrate saving and loading
 

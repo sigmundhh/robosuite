@@ -11,6 +11,11 @@ from stable_baselines3 import SAC
 #For visualization
 from test_utils import visualize_obs
 
+import wandb
+from wandb.keras import WandbCallback
+
+wandb.init(project="Lift_RGBD", entity="sigmundhh")
+
 
 # Make env
 ungym_env = suite.make(
@@ -26,15 +31,19 @@ ungym_env = suite.make(
         camera_depths = True #RGB-D,
     )
 
+#Make a wrapper for the env, specify the modalities we want to use
 env = GymWrapperRGBD(
     ungym_env, keys= ['agentview_image', 'agentview_depth']
 )
 
-# #Init policy
+
+envs = SubprocVecEnv([lambda: env] for i in range(4))
+
+#Init policy
 model = SAC("CnnPolicy", env, verbose=1)
 
-# #Train policy
-model.learn(total_timesteps=1000, log_interval=1)
+#Train policy
+model.learn(total_timesteps=200, log_interval=100)
 
-# #Save trained policy
+#Save trained policy
 model.save("trained_policy_rgbd")
