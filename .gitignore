@@ -112,3 +112,11 @@ mjkey.txt
 .idea
 
 .pytest_cache/
+
+#IDE
+.vscode
+# Logging to wandb
+wandb/
+
+# Videologging
+robosuite/experiments/videos/
