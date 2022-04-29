@@ -30,22 +30,15 @@ config = {
         "controller_configs" : suite.load_controller_config(
             default_controller="OSC_POSE")
     },
-    "total_timesteps": int(1e6),
-    "timesteps_pr_save": int(1e5),
+    "total_timesteps": int(2e6),
+    "timesteps_pr_save": int(5e5),
     "algorithm" : "PPO",
     "policy_model" : "MlpPolicy",
     "num_processes" : multiprocessing.cpu_count(),
     "random_seed" : 42
 }
 
-run = wandb.init(
-    project="robosuite_lift_dense_object_obs",
-    config=config,
-    sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
-    #monitor_gym=True,  # auto-upload the videos of agents playing the game
-    save_code=True,  # optional, what does this imply?
-    mode="disabled" # for test-runds
-)
+
 
 
 class TensorboardCallback(BaseCallback):
@@ -89,6 +82,16 @@ def parse_arguments():
 
     
 if __name__ ==  '__main__':
+
+    run = wandb.init(
+        project="robosuite_lift_dense_object_obs",
+        config=config,
+        sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+        #monitor_gym=True,  # auto-upload the videos of agents playing the game
+        save_code=True,  # optional, what does this imply?
+        #monitor_gym=True,
+        #mode="disabled" # for test-rounds
+    )
 
     # Parse arguments
     args = parse_arguments()
