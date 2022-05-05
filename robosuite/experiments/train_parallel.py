@@ -31,8 +31,8 @@ config = {
             default_controller="OSC_POSE")
     },
     "total_timesteps": int(2e6),
-    "timesteps_pr_save": int(5e5),
-    "algorithm" : "PPO",
+    "timesteps_pr_save": int(1e5),
+    "algorithm" : "SAC",
     "policy_model" : "MlpPolicy",
     "num_processes" : multiprocessing.cpu_count(),
     "random_seed" : 42
@@ -59,6 +59,8 @@ class TensorboardCallback(BaseCallback):
 def make_env(env_params: dict, rank: int, seed: int = 0) -> Callable:
     """
     Utility function for multiprocessed env.
+    Supports both RGB-D images or flattened observations, 
+    in the case of "use_camera_obs" = True, an GymWrapperRGBD is used.
     
     :param env_id: (str) the environment ID
     :param num_env: (int) the number of environment you wish to have in subprocesses
@@ -67,7 +69,12 @@ def make_env(env_params: dict, rank: int, seed: int = 0) -> Callable:
     :return: (Callable)
     """
     def _init() -> gym.Env:
-        env = Monitor(GymWrapper(suite.make(**env_params)))
+        if env_params["use_camera_obs"]:
+            # check that 'has_offscreen_renderer' is True and 'use_object_obs' is False
+            assert env_params["has_offscreen_renderer"] == True and env_params["use_object_obs"] == False
+            env = Monitor(GymWrapperRGBD(suite.make(**env_params), keys=['agentview_image', 'agentview_depth']))
+        else:
+            env = Monitor(GymWrapper(suite.make(**env_params)))
         env.seed(seed + rank)
         return env
     set_random_seed(seed)
@@ -103,7 +110,7 @@ if __name__ ==  '__main__':
     logdir = f'./logs/{run_name}'
     video_dir = f'./videos/{run_name}'
 
-    # Make Lift environment
+    # Make vectorized Lift environment
     env = SubprocVecEnv([make_env(config["env_params"], i, config["random_seed"]) 
         for i in range(config["num_processes"])])
 
@@ -142,7 +149,7 @@ if __name__ ==  '__main__':
     try:
         for i in range(training_iterations):
             model.learn(total_timesteps=learning_timesteps, reset_num_timesteps=False, callback=WandbCallback())#, callback=TensorboardCallback)
-            model.save(f"{models_dir+instance_id}/{learning_timesteps*i}")
+            model.save(f"{models_dir+instance_id}/{learning_timesteps*(i+1)}")
         run.finish()
     except KeyboardInterrupt:
         env.close()
