@@ -125,8 +125,10 @@ if __name__ ==  '__main__':
         #Check that model and logs exist for given instance id
         if not os.path.exists(models_dir+instance_id) or not os.path.exists(logdir+instance_id):
             raise ValueError(f"No model or log found for instance id {instance_id}")
-        
-        model = sb3.PPO.load(models_dir+instance_id, env)
+        if config["algorithm"] == "PPO":
+            model = sb3.PPO.load(models_dir+instance_id, env)
+        elif config["algorithm"] == "SAC":
+            model = sb3.SAC.load(models_dir+instance_id, env)
     
     else:   # We want to make new instance
         instance_id = str(int(time.time()))
@@ -140,7 +142,10 @@ if __name__ ==  '__main__':
         os.makedirs(logdir+instance_id)
         
         # Initialize policy
-        model = sb3.PPO(config["policy_model"], env, verbose=1, tensorboard_log=logdir+instance_id)
+        if config["algorithm"] == "SAC":
+            model = sb3.SAC(config["policy_model"], env, verbose=1)
+        elif config["algorithm"] == "PPO":
+            model = sb3.PPO(config["policy_model"], env, verbose=1)
     
     # Train the model
     training_iterations = config["total_timesteps"] // config["timesteps_pr_save"]
@@ -148,7 +153,7 @@ if __name__ ==  '__main__':
     
     try:
         for i in range(training_iterations):
-            model.learn(total_timesteps=learning_timesteps, reset_num_timesteps=False, callback=WandbCallback())#, callback=TensorboardCallback)
+            model.learn(total_timesteps=learning_timesteps, reset_num_timesteps=False, callback=WandbCallback())
             model.save(f"{models_dir+instance_id}/{learning_timesteps*(i+1)}")
         run.finish()
     except KeyboardInterrupt:
