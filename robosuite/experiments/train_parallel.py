@@ -28,7 +28,8 @@ config = {
         "use_camera_obs" : False,
         "reward_shaping" : True,
         "controller_configs" : suite.load_controller_config(
-            default_controller="OSC_POSE")
+            default_controller="OSC_POSE"),
+        "horizon" : 1000,
     },
     "total_timesteps": int(2e6),
     "timesteps_pr_save": int(1e5),
@@ -37,8 +38,6 @@ config = {
     "num_processes" : multiprocessing.cpu_count(),
     "random_seed" : 42
 }
-
-
 
 
 class TensorboardCallback(BaseCallback):
@@ -70,7 +69,7 @@ def make_env(env_params: dict, rank: int, seed: int = 0) -> Callable:
     """
     def _init() -> gym.Env:
         if env_params["use_camera_obs"]:
-            # check that 'has_offscreen_renderer' is True and 'use_object_obs' is False
+            # These parameters are needed to use RGB-D observations
             assert env_params["has_offscreen_renderer"] == True and env_params["use_object_obs"] == False
             env = Monitor(GymWrapperRGBD(suite.make(**env_params), keys=['agentview_image', 'agentview_depth']))
         else:
@@ -97,7 +96,7 @@ if __name__ ==  '__main__':
         #monitor_gym=True,  # auto-upload the videos of agents playing the game
         save_code=True,  # optional, what does this imply?
         #monitor_gym=True,
-        #mode="disabled" # for test-rounds
+        mode="disabled" # for test-rounds
     )
 
     # Parse arguments
@@ -130,7 +129,7 @@ if __name__ ==  '__main__':
         elif config["algorithm"] == "SAC":
             model = sb3.SAC.load(models_dir+instance_id, env)
     
-    else:   # We want to make new instance
+    else:   # We want to make new model instance
         instance_id = str(int(time.time()))
         
         #Check that instance does not already exist (if several computers train in parallel)
@@ -143,9 +142,9 @@ if __name__ ==  '__main__':
         
         # Initialize policy
         if config["algorithm"] == "SAC":
-            model = sb3.SAC(config["policy_model"], env, verbose=1)
+            model = sb3.SAC(config["policy_model"], env, verbose=1, tensorboard_log=logdir+instance_id)
         elif config["algorithm"] == "PPO":
-            model = sb3.PPO(config["policy_model"], env, verbose=1)
+            model = sb3.PPO(config["policy_model"], env, verbose=1, tensorboard_log=logdir+instance_id)
     
     # Train the model
     training_iterations = config["total_timesteps"] // config["timesteps_pr_save"]
