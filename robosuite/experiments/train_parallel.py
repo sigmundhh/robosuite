@@ -29,7 +29,7 @@ config = {
         "reward_shaping" : True,
         "controller_configs" : suite.load_controller_config(
             default_controller="OSC_POSE"),
-        "horizon" : 1000,
+        "horizon" : 200,
     },
     "total_timesteps": int(2e6),
     "timesteps_pr_save": int(1e5),
