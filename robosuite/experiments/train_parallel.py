@@ -35,7 +35,7 @@ config = {
     "timesteps_pr_save": int(1e5),
     "algorithm" : "SAC",
     "policy_model" : "MlpPolicy",
-    "num_processes" : multiprocessing.cpu_count(),
+    "num_processes" : 8,
     "random_seed" : 42
 }
 
@@ -96,8 +96,8 @@ if __name__ ==  '__main__':
         #monitor_gym=True,  # auto-upload the videos of agents playing the game
         save_code=True,  # optional, what does this imply?
         #monitor_gym=True,
-        mode="disabled" # for test-rounds
-    )
+        #mode="disabled" # for test-rounds
+        )
 
     # Parse arguments
     args = parse_arguments()
