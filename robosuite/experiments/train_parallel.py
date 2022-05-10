@@ -7,7 +7,7 @@ from robosuite.wrappers import GymWrapperRGBD
 import stable_baselines3 as sb3
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize, DummyVecEnv, VecVideoRecorder
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
 from stable_baselines3.common.utils import set_random_seed
 from wandb.integration.sb3 import WandbCallback
 import wandb
@@ -55,11 +55,11 @@ class TensorboardCallback(BaseCallback):
         return True
 
 
-def make_env(env_params: dict, rank: int, seed: int = 0) -> Callable:
+def make_env(env_params: dict, rank: int = 0, seed: int = 0) -> Callable:
     """
     Utility function for multiprocessed env.
-    Supports both RGB-D images or flattened observations, 
-    in the case of "use_camera_obs" = True, an GymWrapperRGBD is used.
+    Supports both RGB-D images or flattened observations 
+    In the case of "use_camera_obs" = True, a GymWrapperRGBD is used.
     
     :param env_id: (str) the environment ID
     :param num_env: (int) the number of environment you wish to have in subprocesses
@@ -96,7 +96,7 @@ if __name__ ==  '__main__':
         #monitor_gym=True,  # auto-upload the videos of agents playing the game
         save_code=True,  # optional, what does this imply?
         #monitor_gym=True,
-        #mode="disabled" # for test-rounds
+        #mode="disabled" # for testing
         )
 
     # Parse arguments
@@ -114,6 +114,12 @@ if __name__ ==  '__main__':
         for i in range(config["num_processes"])])
 
     #env = VecVideoRecorder(env, video_dir, record_video_trigger=lambda x: x % 2000 == 0, video_length=200)
+
+    # Evaluation environment
+    eval_env_config = config["env_params"]
+    eval_env_config["reward_shaping"] =  False   # Sparse rewards for evaluation
+    eval_callback = EvalCallback(make_env(eval_env_config)(), eval_freq=500, 
+                             deterministic=True) # Check: Do I need to pass the env into this another way?
     
 
     #Check if continue training argument is given
@@ -152,9 +158,11 @@ if __name__ ==  '__main__':
     
     try:
         for i in range(training_iterations):
-            model.learn(total_timesteps=learning_timesteps, reset_num_timesteps=False, callback=WandbCallback())
+            model.learn(total_timesteps=learning_timesteps, reset_num_timesteps=False, callback=[WandbCallback(), eval_callback])
             model.save(f"{models_dir+instance_id}/{learning_timesteps*(i+1)}")
+        env.close()
         run.finish()
+        print("Run successfully finished. Closed environment")
     except KeyboardInterrupt:
         env.close()
         run.finish()
