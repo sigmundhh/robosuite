@@ -33,7 +33,7 @@ config = {
     },
     "total_timesteps": int(2e6),
     "timesteps_pr_save": int(1e5),
-    "algorithm" : "SAC",
+    "algorithm" : "PPO",
     "policy_model" : "MlpPolicy",
     "num_processes" : 8,
     "random_seed" : 42
