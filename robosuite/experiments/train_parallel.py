@@ -148,9 +148,9 @@ if __name__ ==  '__main__':
         
         # Initialize policy
         if config["algorithm"] == "SAC":
-            model = sb3.SAC(config["policy_model"], env, verbose=1, tensorboard_log=logdir+instance_id)
+            model = sb3.SAC(config["policy_model"], env, verbose=1, tensorboard_log=logdir+instance_id, seed=config["random_seed"])
         elif config["algorithm"] == "PPO":
-            model = sb3.PPO(config["policy_model"], env, verbose=1, tensorboard_log=logdir+instance_id)
+            model = sb3.PPO(config["policy_model"], env, verbose=1, tensorboard_log=logdir+instance_id, seed=config["random_seed"])
     
     # Train the model
     training_iterations = config["total_timesteps"] // config["timesteps_pr_save"]
