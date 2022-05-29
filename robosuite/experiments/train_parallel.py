@@ -5,7 +5,7 @@ import robosuite as suite
 from robosuite.wrappers import GymWrapper
 from robosuite.wrappers import GymWrapperRGBD
 import stable_baselines3 as sb3
-from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize, DummyVecEnv, VecVideoRecorder
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize, DummyVecEnv, VecVideoRecorder, VecTransposeImage
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
 from stable_baselines3.common.utils import set_random_seed
@@ -23,9 +23,10 @@ config = {
         "env_name" : "Lift",
         "robots" : "IIWA",
         "has_renderer" : False,
-        "has_offscreen_renderer" : False,
-        "use_object_obs" : True,
-        "use_camera_obs" : False,
+        "has_offscreen_renderer" : True,
+        "use_object_obs" : False,
+        "use_camera_obs" : True,
+        "camera_depths" : True,
         "reward_shaping" : True,
         "controller_configs" : suite.load_controller_config(
             default_controller="OSC_POSE"),
@@ -34,7 +35,7 @@ config = {
     "total_timesteps": int(2e6),
     "timesteps_pr_save": int(1e5),
     "algorithm" : "SAC",
-    "policy_model" : "MlpPolicy",
+    "policy_model" : "CnnPolicy",
     "num_processes" : 8,
     "random_seed" : 42
 }
@@ -70,8 +71,10 @@ def make_env(env_params: dict, rank: int = 0, seed: int = 0) -> Callable:
     def _init() -> gym.Env:
         if env_params["use_camera_obs"]:
             # These parameters are needed to use RGB-D observations
-            assert env_params["has_offscreen_renderer"] == True and env_params["use_object_obs"] == False
-            env = Monitor(GymWrapperRGBD(suite.make(**env_params), keys=['agentview_image', 'agentview_depth']))
+            assert (env_params["has_offscreen_renderer"] == True and env_params["use_object_obs"] == False
+                and env_params["camera_depths"] == True)
+            env_params["camera_widths"], env_params["camera_heights"] = [128], [128]
+            env = Monitor((GymWrapperRGBD(suite.make(**env_params), keys=['agentview_image', 'agentview_depth'])))
         else:
             env = Monitor(GymWrapper(suite.make(**env_params)))
         env.seed(seed + rank)
@@ -96,7 +99,7 @@ if __name__ ==  '__main__':
         #monitor_gym=True,  # auto-upload the videos of agents playing the game
         save_code=True,  # optional, what does this imply?
         #monitor_gym=True,
-        #mode="disabled" # for testing
+        mode="disabled" # for testing
         )
 
     # Parse arguments
@@ -110,16 +113,22 @@ if __name__ ==  '__main__':
     video_dir = f'./videos/{run_name}'
 
     # Make vectorized Lift environment
-    env = SubprocVecEnv([make_env(config["env_params"], i, config["random_seed"]) 
+    env = DummyVecEnv([make_env(config["env_params"], i, config["random_seed"]) 
         for i in range(config["num_processes"])])
+
+    if config["env_params"]["use_camera_obs"]:
+        env = VecTransposeImage(env)
 
     #env = VecVideoRecorder(env, video_dir, record_video_trigger=lambda x: x % 2000 == 0, video_length=200)
 
     # Evaluation environment
     eval_env_config = config["env_params"]
     eval_env_config["reward_shaping"] =  False   # Sparse rewards for evaluation
-    eval_callback = EvalCallback(make_env(eval_env_config)(), eval_freq=500, 
-                             deterministic=True) # Check: Do I need to pass the env into this another way?
+    eval_env = DummyVecEnv([make_env(eval_env_config)])
+    if config["env_params"]["use_camera_obs"]:
+        eval_env = VecTransposeImage(eval_env)
+    eval_callback = EvalCallback(eval_env, eval_freq=500, 
+                             deterministic=True)
     
 
     #Check if continue training argument is given
